@@ -8,7 +8,7 @@ on:
   pull_request:
   push:
     branches:
-      - release-*
+    - release-*
 
 concurrency:
   group: ${{github.workflow}}-${{github.ref}}
@@ -26,150 +26,114 @@ env:
   RUSTFLAGS: "-C debuginfo=0 -D warnings"
 
 jobs:
-  build-and-install-on-iOS:
-    if: ${{ github.event_name == 'merge_group' }}
-    runs-on: macos-14
-    timeout-minutes: 30
-    steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-
-      - name: Install toolchain
-        run: |
-          rustup toolchain install stable --no-self-update --profile=minimal
-          rustup override set stable
-          cargo -V
-
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
-          # key won't match, will rely on restore-keys
-          key: ${{ runner.os }}-stable-aarch64-apple-ios-sim-${{ hashFiles('**/Cargo.toml') }}-
-          # See .github/workflows/update-caches.yml for how keys are generated
-          restore-keys: |
-            ${{ runner.os }}-stable-aarch64-apple-ios-sim-${{ hashFiles('**/Cargo.toml') }}-
-            ${{ runner.os }}-stable-aarch64-apple-ios-sim-
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-
-      - name: Add iOS targets
-        run: rustup target add aarch64-apple-ios-sim
-
-      - name: Build and install iOS app in iOS Simulator.
-        run: cd examples/mobile && make install
-
   build-android:
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0   # v7.0.0
+      with:
+        persist-credentials: false
 
-      - name: Install toolchain
-        run: |
-          rustup toolchain install stable --no-self-update --profile=minimal
-          rustup override set stable
-          cargo -V
+    - name: Install toolchain
+      run: |
+        rustup toolchain install stable --no-self-update --profile=minimal
+        rustup override set stable
+        cargo -V
 
-      - name: Set up JDK 17
-        uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654 # v5.2.0
-        with:
-          java-version: "17"
-          distribution: "temurin"
+    - name: Set up JDK 17
+      uses: actions/setup-java@be666c2fcd27ec809703dec50e508c2fdc7f6654   # v5.2.0
+      with:
+        java-version: "17"
+        distribution: "temurin"
 
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
+    - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae   # v5.0.5
+      with:
           # key won't match, will rely on restore-keys
-          key: ${{ runner.os }}-stable-aarch64-linux-android-${{ hashFiles('**/Cargo.toml') }}-
+        key: ${{ runner.os }}-stable-aarch64-linux-android-${{ hashFiles('**/Cargo.toml') }}-
           # See .github/workflows/update-caches.yml for how keys are generated
-          restore-keys: |
-            ${{ runner.os }}-stable-aarch64-linux-android-${{ hashFiles('**/Cargo.toml') }}-
-            ${{ runner.os }}-stable-aarch64-linux-android-
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
+        restore-keys: |
+          ${{ runner.os }}-stable-aarch64-linux-android-${{ hashFiles('**/Cargo.toml') }}-
+          ${{ runner.os }}-stable-aarch64-linux-android-
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
 
-      - name: Install Android targets
-        run: rustup target add aarch64-linux-android
+    - name: Install Android targets
+      run: rustup target add aarch64-linux-android
 
-      - name: Install Cargo NDK
-        run: cargo install --force cargo-ndk
+    - name: Install Cargo NDK
+      run: cargo install --force cargo-ndk
 
-      - name: Build .so file
-        run: cargo ndk -t arm64-v8a -P 26 -o android_example/app/src/main/jniLibs build --package bevy_mobile_example
+    - name: Build .so file
+      run: cargo ndk -t arm64-v8a -P 26 -o android_example/app/src/main/jniLibs build --package bevy_mobile_example
 
-      - name: Build app for Android
-        run: cd examples/mobile/android_example && chmod +x gradlew && ./gradlew build
+    - name: Build app for Android
+      run: cd examples/mobile/android_example && chmod +x gradlew && ./gradlew build
 
   run-examples-on-wasm:
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 60
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0   # v7.0.0
+      with:
+        persist-credentials: false
 
-      - name: Install toolchain
-        run: |
-          rustup toolchain install stable --no-self-update --profile=minimal
-          rustup target add wasm32-unknown-unknown --toolchain stable
-          rustup override set stable
-          cargo -V
+    - name: Install toolchain
+      run: |
+        rustup toolchain install stable --no-self-update --profile=minimal
+        rustup target add wasm32-unknown-unknown --toolchain stable
+        rustup override set stable
+        cargo -V
 
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
+    - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae   # v5.0.5
+      with:
           # key won't match, will rely on restore-keys
-          key: ${{ runner.os }}-stable-wasm32-unknown-unknown-${{ hashFiles('**/Cargo.toml') }}-
+        key: ${{ runner.os }}-stable-wasm32-unknown-unknown-${{ hashFiles('**/Cargo.toml') }}-
           # See .github/workflows/update-caches.yml for how keys are generated
-          restore-keys: |
-            ${{ runner.os }}-stable-wasm32-unknown-unknown-${{ hashFiles('**/Cargo.toml') }}-
-            ${{ runner.os }}-stable-wasm32-unknown-unknown-
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
+        restore-keys: |
+          ${{ runner.os }}-stable-wasm32-unknown-unknown-${{ hashFiles('**/Cargo.toml') }}-
+          ${{ runner.os }}-stable-wasm32-unknown-unknown-
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
 
-      - name: Install wasm-bindgen
-        run: cargo install --force wasm-bindgen-cli
+    - name: Install wasm-bindgen
+      run: cargo install --force wasm-bindgen-cli
 
-      - name: Setup playwright
-        run: |
-          cd .github/start-wasm-example
-          npm install
-          npx playwright install --with-deps
-          cd ../..
+    - name: Setup playwright
+      run: |
+        cd .github/start-wasm-example
+        npm install
+        npx playwright install --with-deps
+        cd ../..
 
-      - name: First Wasm build
-        env:
-          RUSTFLAGS: '-C debuginfo=0 -D warnings --cfg getrandom_backend="wasm_js"'
-        run: |
-          cargo build --release --example testbed_ui --target wasm32-unknown-unknown
+    - name: First Wasm build
+      env:
+        RUSTFLAGS: '-C debuginfo=0 -D warnings --cfg getrandom_backend="wasm_js"'
+      run: |
+        cargo build --release --example testbed_ui --target wasm32-unknown-unknown
 
-      - name: Run examples
-        shell: bash
-        run: |
-          # start a webserver
-          python3 -m http.server --directory examples/wasm &
+    - name: Run examples
+      shell: bash
+      run: |
+        # start a webserver
+        python3 -m http.server --directory examples/wasm &
 
-          xvfb-run cargo run -p build-wasm-example -- --browsers chromium --browsers firefox --frames 25 --test 2d_shapes lighting text_debug breakout
+        xvfb-run cargo run -p build-wasm-example -- --browsers chromium --browsers firefox --frames 25 --test 2d_shapes lighting text_debug breakout
 
-      - name: Save screenshots
-        uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a # v7.0.1
-        with:
-          name: screenshots-wasm
-          path: .github/start-wasm-example/screenshot-*.png
+    - name: Save screenshots
+      uses: actions/upload-artifact@043fb46d1a93c77aae656e7c1c64a875d1fc6a0a   # v7.0.1
+      with:
+        name: screenshots-wasm
+        path: .github/start-wasm-example/screenshot-*.png
 
   build-without-default-features:
     if: ${{ github.event_name == 'merge_group' }}
@@ -180,18 +144,18 @@ jobs:
         crate: [bevy_ecs, bevy_reflect, bevy]
     runs-on: ubuntu-latest
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - name: Install toolchain
-        run: |
-          rustup toolchain install stable --no-self-update --profile=minimal
-          rustup override set stable
-          cargo -V
-      - name: Install Linux dependencies
-        uses: ./.github/actions/install-linux-deps
-      - name: Build
-        run: cargo build -p ${{ matrix.crate }} --no-default-features
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0   # v7.0.0
+      with:
+        persist-credentials: false
+    - name: Install toolchain
+      run: |
+        rustup toolchain install stable --no-self-update --profile=minimal
+        rustup override set stable
+        cargo -V
+    - name: Install Linux dependencies
+      uses: ./.github/actions/install-linux-deps
+    - name: Build
+      run: cargo build -p ${{ matrix.crate }} --no-default-features
 
   build-without-default-features-status:
     if: |
@@ -200,83 +164,83 @@ jobs:
     needs: build-without-default-features
     runs-on: ubuntu-latest
     steps:
-      - name: Successful
-        if: ${{ !(contains(needs.*.result, 'failure')) }}
-        run: exit 0
-      - name: Failing
-        if: ${{ contains(needs.*.result, 'failure') }}
-        run: exit 1
+    - name: Successful
+      if: ${{ !(contains(needs.*.result, 'failure')) }}
+      run: exit 0
+    - name: Failing
+      if: ${{ contains(needs.*.result, 'failure') }}
+      run: exit 1
 
   check-unused-dependencies:
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - name: Install toolchain
-        run: |
-          rustup toolchain install ${{ env.NIGHTLY_TOOLCHAIN }} --no-self-update --profile=minimal
-          rustup override set ${{ env.NIGHTLY_TOOLCHAIN }}
-          cargo -V
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0   # v7.0.0
+      with:
+        persist-credentials: false
+    - name: Install toolchain
+      run: |
+        rustup toolchain install ${{ env.NIGHTLY_TOOLCHAIN }} --no-self-update --profile=minimal
+        rustup override set ${{ env.NIGHTLY_TOOLCHAIN }}
+        cargo -V
+    - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae   # v5.0.5
+      with:
           # key won't match, will rely on restore-keys
-          key: ${{ runner.os }}-${{ env.NIGHTLY_TOOLCHAIN }}--${{ hashFiles('**/Cargo.toml') }}-
+        key: ${{ runner.os }}-${{ env.NIGHTLY_TOOLCHAIN }}--${{ hashFiles('**/Cargo.toml') }}-
           # See .github/workflows/update-caches.yml for how keys are generated
-          restore-keys: |
-            ${{ runner.os }}-${{ env.NIGHTLY_TOOLCHAIN }}--${{ hashFiles('**/Cargo.toml') }}-
-            ${{ runner.os }}-${{ env.NIGHTLY_TOOLCHAIN }}--
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-      - name: Installs cargo-udeps
-        run: cargo install --force cargo-udeps
-      - name: Install Linux dependencies
-        uses: ./.github/actions/install-linux-deps
-      - name: Run cargo udeps
-        run: cargo udeps
+        restore-keys: |
+          ${{ runner.os }}-${{ env.NIGHTLY_TOOLCHAIN }}--${{ hashFiles('**/Cargo.toml') }}-
+          ${{ runner.os }}-${{ env.NIGHTLY_TOOLCHAIN }}--
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+    - name: Installs cargo-udeps
+      run: cargo install --force cargo-udeps
+    - name: Install Linux dependencies
+      uses: ./.github/actions/install-linux-deps
+    - name: Run cargo udeps
+      run: cargo udeps
 
   check-example-showcase-patches-still-work:
     if: ${{ github.event_name == 'merge_group' }}
     runs-on: ubuntu-latest
     timeout-minutes: 30
     steps:
-      - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0 # v7.0.0
-        with:
-          persist-credentials: false
-      - name: Install toolchain
-        run: |
-          rustup toolchain install stable --no-self-update --profile=minimal
-          rustup override set stable
-          cargo -V
-      - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae # v5.0.5
-        with:
+    - uses: actions/checkout@9c091bb21b7c1c1d1991bb908d89e4e9dddfe3e0   # v7.0.0
+      with:
+        persist-credentials: false
+    - name: Install toolchain
+      run: |
+        rustup toolchain install stable --no-self-update --profile=minimal
+        rustup override set stable
+        cargo -V
+    - uses: actions/cache/restore@27d5ce7f107fe9357f9df03efb73ab90386fccae   # v5.0.5
+      with:
           # key won't match, will rely on restore-keys
-          key: ${{ runner.os }}-stable--${{ hashFiles('**/Cargo.toml') }}-
+        key: ${{ runner.os }}-stable--${{ hashFiles('**/Cargo.toml') }}-
           # See .github/workflows/update-caches.yml for how keys are generated
-          restore-keys: |
-            ${{ runner.os }}-stable--${{ hashFiles('**/Cargo.toml') }}-
-            ${{ runner.os }}-stable--
-          path: |
-            ~/.cargo/bin/
-            ~/.cargo/registry/index/
-            ~/.cargo/registry/cache/
-            ~/.cargo/git/db/
-            target/
-      - name: Install Linux dependencies
-        uses: ./.github/actions/install-linux-deps
-      - name: Apply patches
-        run: |
-          CODE=0
-          for patch in tools/example-showcase/*.patch; do
-            # Try applying the patch, logging an error if it fails.
-            git apply --ignore-whitespace $patch || { echo "::error::$patch failed to apply."; CODE=1; }
-          done
-          exit $CODE
-      - name: Build with patches
-        run: cargo build
+        restore-keys: |
+          ${{ runner.os }}-stable--${{ hashFiles('**/Cargo.toml') }}-
+          ${{ runner.os }}-stable--
+        path: |
+          ~/.cargo/bin/
+          ~/.cargo/registry/index/
+          ~/.cargo/registry/cache/
+          ~/.cargo/git/db/
+          target/
+    - name: Install Linux dependencies
+      uses: ./.github/actions/install-linux-deps
+    - name: Apply patches
+      run: |
+        CODE=0
+        for patch in tools/example-showcase/*.patch; do
+          # Try applying the patch, logging an error if it fails.
+          git apply --ignore-whitespace $patch || { echo "::error::$patch failed to apply."; CODE=1; }
+        done
+        exit $CODE
+    - name: Build with patches
+      run: cargo build
